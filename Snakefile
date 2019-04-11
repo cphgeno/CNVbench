@@ -11,7 +11,9 @@ configfile: "config.yaml"
 # 	print(*args, **kwargs, file = sys.stderr)
 
 rule all:
-	input: expand("results/{tool}/{sample}.bed", tool = config["TOOLS"], sample = SAMPLES)
+	input:
+		WES = expand("results/{tool}/{sample}.bed", tool = config["TOOLS"]["WES"], sample = filter(lambda x: x.startswith("GB-WES-"), SAMPLES)),
+		WGS = expand("results/{tool}/{sample}.bed", tool = config["TOOLS"]["WGS"], sample = filter(lambda x: x.startswith("GB-WGS-"), SAMPLES)),
 	message: "Pipeline complete"
 
 rule align:
@@ -28,5 +30,6 @@ rule align:
 # 		") 2> {log}"
 
 include: "tools/align.smk"
-for tool in config["TOOLS"]:
+TOOLS = set(tool for library in config["TOOLS"] for tool in config["TOOLS"][library])
+for tool in TOOLS:
 	include: f"tools/{tool}/rules.smk"
