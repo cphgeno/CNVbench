@@ -1,4 +1,6 @@
-localrules: CNVnator_postprocess
+localrules:
+	CNVnator_PoN_filtering,
+	CNVnator_postprocess
 
 rule CNVnator_calling:
 	input:
@@ -33,11 +35,9 @@ rule CNVnator_filtering:
 	input:
 		vcf = rules.CNVnator_calling.output.vcf,
 		bed = config["bed"]["WES_strict"],
-		# pon = config["pon"]["CNVnator"],
 	output:
-		vcf_pval = temp("temp/CNVnator/{sample}_filtered_pvalue.vcf"),
-		vcf_exon = temp("temp/CNVnator/{sample}_filtered_pvalue_exons.vcf"),
-		vcf_pon  = temp("temp/CNVnator/{sample}_filtered_pvalue_exons_pon.vcf"),
+		vcf_pval = temp("temp/CNVnator/{sample}/{sample}_filtered_pvalue.vcf"),
+		vcf_exon = temp("temp/CNVnator/{sample}/{sample}_filtered_pvalue_exons.vcf"),
 	resources:
 		mem_gb     = 20,
 		walltime_h = 5
@@ -48,14 +48,29 @@ rule CNVnator_filtering:
 		"module load shared tools ngs bedtools/2.27.1 vcflib/1.0.0-rc2; "
 		"vcffilter -f 'natorP1 < 0.01 & natorP2 < 0.01' {input.vcf} > {output.vcf_pval}; "
 		"bedtools intersect -a {output.vcf_pval} -b {input.bed} -wa -wb -header > {output.vcf_exon}; "
-		# "bedtools intersect -a {output.vcf_exon} -b {input.pon} -v -f 0.9 -header > {output.vcf_pon}; "
-		"exit 1; "
+		") 2> {log}"
+
+rule CNVnator_PoN_filtering:
+	input:
+		vcf = rules.CNVnator_filtering.output.vcf_pval,
+		# pon = config["pon"]["CNVnator"],
+	output:
+		vcf  = temp("temp/CNVnator/{sample}/{sample}_filtered_pvalue_pon.vcf"),
+	resources:
+		mem_gb     = 5,
+		walltime_h = 1
+	threads: 1
+	log: "logs/CNVnator_PoN_filtering/{sample}.log"
+	shell:
+		"("
+		"module load shared tools ngs bedtools/2.27.1; "
+		"bedtools intersect -a {output.vcf_exon} -b {input.pon} -v -f 0.9 -header > {output.vcf_pon}; "
 		") 2> {log}"
 
 rule CNVnator_postprocess:
 	input:
-		rules.CNVnator_calling.output.vcf
-		# rules.CNVnator_filtering.output.vcf_pon
+		rules.CNVnator_filtering.output.vcf_pval
+		# rules.CNVnator_PoN_filtering.output.vcf
 	output:
 		"results/CNVnator/{sample}.bed"
 	resources:
