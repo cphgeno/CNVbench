@@ -69,17 +69,33 @@ rule CNVnator_PoN_filtering:
 
 rule CNVnator_postprocess:
 	input:
-		rules.CNVnator_filtering.output.vcf_pval
-		# rules.CNVnator_PoN_filtering.output.vcf
+		vcf = rules.CNVnator_filtering.output.vcf_pval
+		# vcf = rules.CNVnator_PoN_filtering.output.vcf
 	output:
-		"results/CNVnator/{sample}.bed"
+		bed = "results/CNVnator/{sample}.bed"
 	resources:
 		mem_gb     = 4,
 		walltime_h = 5
 	threads: 1
 	log: "logs/CNVnator_postprocess/{sample}.log"
-	shell:
-		"("
-		"module load anaconda3/4.4.0; "
-		"parse_CNVnator.py --input {input} > {output} "
-		") 2> {log}"
+	run:
+		with open(input.vcf, "r") as i, open(output.bed, "w") as o:
+			for line in i:
+				if line.startswith("#"):
+					continue
+				cols = line.split("\t")
+				## CHR POS
+				out = cols[0:2]
+				## END
+				END = cols[7].split(';', 1)[0]
+				assert END.startswith("END=")
+				END = END.split('=')[1]
+				out.append(END)
+				## ID
+				out.append(cols[2])
+				## GT
+				out.append(cols[4])
+				## CN
+				CN = cols[-1].split(':', 1)[1]
+				out.append(CN)
+				print('\t'.join(out), file = o)
