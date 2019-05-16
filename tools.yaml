@@ -1,0 +1,24 @@
+WES:
+  - CLC
+  - cn.MOPS
+  - CNVkit
+  - CODEX2
+  - ExomeDepth
+  - GATK_gCNV
+  - Manta
+  - Cytoscan
+WGS:
+  - CLC
+  - cn.MOPS
+#  - CNVkit
+  - CNVnator
+#  - CODEX2
+  - ControlFREEC
+  - DELLY
+  - Lumpy
+  - GATK_gCNV
+  - Manta
+  - Cytoscan
+#  - SvABA
+#  - TIDDIT
+

@@ -1,5 +1,5 @@
 localrules:
-	CNVnator_PoN_filtering,
+	# CNVnator_PoN_filtering,
 	CNVnator_postprocess
 
 rule CNVnator_calling:
@@ -19,10 +19,12 @@ rule CNVnator_calling:
 		walltime_h = 96
 	threads: 1
 	log: "logs/CNVnator_calling/{sample}.log"
+	benchmark: "benchmarks/CNVnator/{sample}.txt"
 	shell:
 		"("
 		"module load shared tools ngs root/6.06.06 yeppp/1.0.0 perl/5.24.0 cnvnator/0.3.3; "
 		"mkdir -p {params.outdir}; "
+		"touch {params.outdir}/.notempty; "
 		"cnvnator -root {output.root} -tree {input.cram}; "
 		"cnvnator -root {output.root} -his {params.bin_size} -d {input.fsa_dir}; "
 		"cnvnator -root {output.root} -stat {params.bin_size}; "
@@ -50,26 +52,10 @@ rule CNVnator_filtering:
 		"bedtools intersect -a {output.vcf_pval} -b {input.bed} -wa -wb -header > {output.vcf_exon}; "
 		") 2> {log}"
 
-rule CNVnator_PoN_filtering:
-	input:
-		vcf = rules.CNVnator_filtering.output.vcf_pval,
-		# pon = config["pon"]["CNVnator"],
-	output:
-		vcf  = temp("temp/CNVnator/{sample}/{sample}_filtered_pvalue_pon.vcf"),
-	resources:
-		mem_gb     = 5,
-		walltime_h = 1
-	threads: 1
-	log: "logs/CNVnator_PoN_filtering/{sample}.log"
-	shell:
-		"("
-		"module load shared tools ngs bedtools/2.27.1; "
-		"bedtools intersect -a {output.vcf_exon} -b {input.pon} -v -f 0.9 -header > {output.vcf_pon}; "
-		") 2> {log}"
-
 rule CNVnator_postprocess:
 	input:
-		vcf = rules.CNVnator_filtering.output.vcf_pval
+		vcf = rules.CNVnator_calling.output.vcf,
+		# vcf = rules.CNVnator_filtering.output.vcf_pval
 		# vcf = rules.CNVnator_PoN_filtering.output.vcf
 	output:
 		bed = "results/CNVnator/{sample}.bed"
@@ -81,6 +67,7 @@ rule CNVnator_postprocess:
 	run:
 		with open(input.vcf, "r") as i, open(output.bed, "w") as o:
 			for line in i:
+				line = line.rstrip()
 				if line.startswith("#"):
 					continue
 				cols = line.split("\t")
@@ -91,11 +78,15 @@ rule CNVnator_postprocess:
 				assert END.startswith("END=")
 				END = END.split('=')[1]
 				out.append(END)
-				## ID
-				out.append(cols[2])
-				## GT
-				out.append(cols[4])
 				## CN
 				CN = cols[-1].split(':', 1)[1]
 				out.append(CN)
+				pval = cols[7].split(';')[5]
+				assert pval.startswith("natorP1=")
+				pval = pval.split('=')[1]
+				out.append(pval)
 				print('\t'.join(out), file = o)
+
+rule CNVnator:
+	input:
+		expand("results/{tool}/{sample}.bed", tool = "CNVnator", sample = SAMPLES_WGS)

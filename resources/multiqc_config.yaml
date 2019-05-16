@@ -1,0 +1,164 @@
+table_cond_formatting_rules:
+    mqc-generalstats-qualimap_rna-5_3_bias:
+        warn:
+            - lt: 0.95
+            - gt: 1.05
+        fail:
+            - lt: 0.75
+            - gt: 1.25
+    mqc-generalstats-qualimap_bam-30_x_pc:
+        warn:
+            - lt: 97
+        fail:
+            - lt: 90
+    mqc-generalstats-qualimap_bam-median_coverage:
+        warn:
+            - lt: 30
+        fail:
+            - lt: 25
+
+    mqc-generalstats-picard-PCT_PF_READS_ALIGNED:
+        warn:
+            - lt: 0.9
+        fail:
+            - lt: 0.5
+    mqc-generalstats-picard-summed_median:
+        warn:
+            - lt: 150
+        fail:
+            - lt: 100
+    mqc-generalstats-bamsormadup-PERCENT_DUPLICATION:
+        warn:
+            - gt: 25
+        fail:
+            - gt: 50
+    mqc-generalstats-fastqc_trimmed-percent_gc:
+        warn:
+            - gt: 40
+        fail:
+            - gt: 35
+    mqc-generalstats-fastqc_trimmed-percent_duplicates:
+        warn:
+            - gt: 25
+        fail:
+            - gt: 50
+
+
+
+table_cond_formatting_colours:
+    - blue: '#337ab7'
+    - lbue: '#5bc0de'
+    - pass: '#5cb85c'
+    - warn: '#f0ad4e'
+    - fail: '#d9534f'
+
+
+
+# Specify a custom logo to add to reports (uncomment to use)
+custom_logo: '/home/projects/cu_10047/data/resources/RegionH.png'
+custom_logo_url: 'https://www.rigshospitalet.dk/afdelinger-og-klinikker/diagnostisk/genomisk-medicin/Sider/default.aspx'
+custom_logo_title: 'Rigshospitalet'
+subtitle: 'Enhed for Genomisk Medicin'
+intro_text: 'Sequencing QC report'
+
+
+
+extra_fn_clean_exts:
+    - '_snv'
+    - '.cram'
+    - '.dupmetrics'
+    - '.ValidateSamFile'
+
+
+
+## To remove a section of a module
+# https://multiqc.info/docs/#removing-modules-or-sections
+module_order:
+    - featureCounts:
+        name: 'featureCounts (Genes)'
+        path_filters:
+            - '*/feature_counts/*.genes.summary'
+
+    - featureCounts:
+        name: 'featureCounts (Transcripts)'
+        path_filters:
+            - '*/feature_counts/*.transc.summary'
+
+    - featureCounts:
+        name: 'featureCounts (Exons)'
+        path_filters:
+            - '*/feature_counts/*.exons.summary'
+
+    - qualimap:
+        name: 'Qualimap (RNA)'
+        info: 'Qualimap report for RNA data.'
+        path_filters:
+            - '*/qualimap_rnaqc/*'
+
+    - qualimap:
+        name: 'Qualimap (BAM)'
+        path_filters:
+            - '*/qualimap/*'
+
+    - picard:
+        path_filters:
+            - '*/picard/*'
+
+    - biobambam2:
+        name: 'BamSorMaDup'
+        path_filters:
+            - '*/mark_duplicates/*'
+
+    - samtools
+
+    - star
+
+    - fastqc:
+        name: 'FastQC (trimmed)'
+        info: 'FastQC results AFTER adapter trimming and QC.'
+        path_filters:
+            - '*/fastqc_post/*'
+
+    - bbmap
+
+    - fastqc:
+        name: 'FastQC (raw)'
+        path_filters:
+            - '*/fastqc_pre/*'
+
+
+
+table_columns_visible:
+    picard:
+        PCT_PF_READS_ALIGNED: False
+    Samtools Flagstat:
+        mapped_passed: True
+    STAR:
+        uniquely_mapped_percent: False
+        uniquely_mapped: False
+    FastQC (trimmed):
+        percent_duplicates: False
+        avg_sequence_length: True
+    FastQC (raw):
+        percent_duplicates: False
+        percent_gc: False
+        total_sequences: False
+
+table_columns_placement:
+    Samtools Flagstat:
+        mapped_passed: 1100
+    STAR:
+        uniquely_mapped_percent: 1200
+        uniquely_mapped: 1210
+    FastQC (trimmed):
+        percent_duplicates: 1400
+        percent_gc: 1410
+        avg_sequence_length: 1420
+        percent_fails: 1430
+        total_sequences: 1440
+    FastQC (raw):
+        percent_duplicates: 1500
+        percent_gc: 1510
+        avg_sequence_length: 1520
+        percent_fails: 1530
+        total_sequences: 1540

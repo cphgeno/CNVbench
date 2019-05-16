@@ -1,9 +1,12 @@
+import glob
+
 def get_read_group(read):
 	import gzip
 	with gzip.open(read) as f:
 		(instrument, run_number, flowcell_id, lane, tile, X_pos, Y_pos, read, is_filtered, control_number, sample_barcode) = f.readline().decode()[1:].replace(':',' ').split()
 	return '_'.join([instrument, run_number, flowcell_id])
 
+localrules: combine_truth_intervals
 rule bwa_mem:
 	input:
 		ref   = config["human_reference"],
@@ -19,12 +22,9 @@ rule bwa_mem:
 		walltime_h = 15
 	version: '0.7.15'
 	shell:
-		"(module load moab tools samtools/1.9 bwa/{version}; "
-		# Run BWA-MEM
+		"(module load tools samtools/1.9 bwa/{version}; "
 		"bwa mem -M -t {threads} -R {params.rg} {input.ref} {input.reads} > {output.sam}; "
 		") 2> {log}"
-
-## Note: fix_read_groups is excluded
 
 rule mark_duplicates:
 	input:
@@ -42,7 +42,7 @@ rule mark_duplicates:
 		walltime_h = 10
 	version: "2.0.95-release-20190320141403"
 	shell:
-		"(module load moab tools perl/5.24.0 samtools/1.9 biobambam2/{version}; "
+		"(module load tools perl/5.24.0 samtools/1.9 biobambam2/{version}; "
 		# Mark Duplicates and Sort reads
 		"cat {input.sam} | bamsormadup inputformat=sam threads={threads} tmpfile={params.tmpfile} SO=coordinate M={output.metrics} indexfilename={output.bai} > {output.bam}; "
 		# Fix metrics file to be recognized by MultiQC
@@ -60,7 +60,7 @@ rule filter_reads:
 	log: "logs/filter_reads/{sample}.log"
 	version: "4.0.10.1"
 	shell:
-		"(module load shared moab tools java/1.8.0 gatk/{version}; "
+		"(module load tools java/1.8.0 gatk/{version}; "
 		# Filter out bad reads (https://software.broadinstitute.org/gatk/documentation/tooldocs/current/)
 		"gatk PrintReads -R {input.ref} -I {input.bam} "
 		"-RF GoodCigarReadFilter "                          # Keep only reads containing good CIGAR string
@@ -91,11 +91,11 @@ rule bqsr_create:
 	log: "logs/bqsr/{sample}.create.log"
 	threads: 1
 	resources:
-		mem_gb     = 10,
-		walltime_h = 10
+		mem_gb     = 20,
+		walltime_h = 20
 	version: "4.0.10.1"
 	shell:
-		"(module load moab tools java/1.8.0 samtools/1.9 gatk/{version}; "
+		"(module load tools java/1.8.0 samtools/1.9 gatk/{version}; "
 		"gatk BaseRecalibrator "
 		"--known-sites {input.dbsnp} "
 		"--known-sites {input.indels} "
@@ -115,8 +115,8 @@ rule bqsr_apply:
 		bqsr = rules.bqsr_create.output.bqsr,
 		ref  = config["human_reference"]
 	output:
-		bam = temp("temp/align/bqsr/{sample}.bam"),
-		bai = temp("temp/align/bqsr/{sample}.bai")
+		bam = "results/alignments/{sample}.bam",
+		bai = "results/alignments/{sample}.bai"
 	log: "logs/bqsr/{sample}.apply.log",
 	threads: 1
 	resources:
@@ -124,7 +124,7 @@ rule bqsr_apply:
 		walltime_h = 15
 	version: "4.0.10.1"
 	shell:
-		"(module load moab tools java/1.8.0 samtools/1.9 gatk/{version}; "
+		"(module load tools java/1.8.0 samtools/1.9 gatk/{version}; "
 		"gatk ApplyBQSR -R {input.ref} "
 		"-bqsr {input.bqsr} "
 		"-I {input.bam} "
@@ -147,7 +147,50 @@ rule archive_cram:
 		walltime_h = 5
 	version: "1.9"
 	shell:
-		"(module load moab tools samtools/{version}; "
+		"(module load tools samtools/{version}; "
 		"samtools view -C -T {input.ref} -@ {threads} {input.bam} > {output.cram}; "
 		"samtools index -@ {threads} {output.cram} {output.crai}; "
 		") 2> {log}"
+
+rule combine_truth_intervals:
+	input:
+		wes = glob.glob("concordance/truth_set/**WES*.bed", recursive = True),
+		wgs = glob.glob("concordance/truth_set/**WGS*.bed", recursive = True),
+	output:
+		bed = "temp/mosdepth/truth_intervals.bed",
+		wes = "temp/mosdepth/truth_intervals_WES.bed",
+		wgs = "temp/mosdepth/truth_intervals_WGS.bed",
+	shell:
+		"cat {input.wes} {input.wgs} | sort -k1,1 -k2,2 -V | uniq > {output.bed}; "
+		"cat {input.wes} | sort -k1,1 -k2,2 -V | uniq > {output.wes}; "
+		"cat {input.wgs} | sort -k1,1 -k2,2 -V | uniq > {output.wgs}; "
+
+rule check_wes_callability:
+	input:
+		truth  = rules.combine_truth_intervals.output.wes,
+		region = config["bed"]["WES_strict"],
+	output:
+		bed = "temp/mosdepth/uncallable.bed"
+	shell:
+		"module load bedtools/2.27.1; "
+		"bedtools subtract -a {input.truth} -b {input.region} > {output.bed}"
+
+rule mosdepth:
+	input:
+		cram = rules.archive_cram.output.cram,
+		crai = rules.archive_cram.output.crai,
+		bed  = rules.combine_truth_intervals.output.bed,
+		ref  = config["human_reference"],
+	output:
+		dist_g  = "stats/mosdepth/{sample}.mosdepth.global.dist.txt",
+		dist_r  = "stats/mosdepth/{sample}.mosdepth.region.dist.txt",
+		regions = "stats/mosdepth/{sample}.regions.bed.gz",
+		reg_csi = "stats/mosdepth/{sample}.regions.bed.gz.csi",
+	log: "logs/mosdepth/{sample}.log"
+	params:
+		prefix = "stats/mosdepth/{sample}",
+	shell:
+		"(module load tools htslib/1.9 mosdepth/0.2.4; "
+		"MOSDEPTH_PRECISION=5 mosdepth -f {input.ref} -n --by {input.bed} {params.prefix} {input.cram}; "
+		") 2> {log}"
+

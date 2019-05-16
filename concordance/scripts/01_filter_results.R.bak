@@ -1,0 +1,120 @@
+#!/usr/bin/env Rscript
+get_script_dir <- function() {
+	initial.options <- commandArgs(trailingOnly = FALSE)
+	file.arg.name <- "--file="
+	script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
+	return(dirname(script.name))
+}
+
+setwd(paste(get_script_dir(), "..", sep ="/"))
+
+suppressPackageStartupMessages(library("rtracklayer", warn.conflicts = TRUE))
+library("yaml")
+
+RESULTSDIR <- "../results"
+TRUTHDIR   <- "truth_set"
+OUTDIR     <- "results_filtered"
+TOOLS     <- yaml::yaml.load_file("../tools.yaml")
+
+# MIN_OVERLAP <- 0.10 ## Fraction, i.e. 0.10 == "10 %"
+MIN_OVERLAP <- 0 ## Disable overlap filtering
+
+BED <- list(
+	WGS = import("../resources/hg19/regions/WGS_mappable_regions.bed"),
+	WES = import("../resources/hg19/regions/Broad_exomes.bed")
+)
+
+## Check tool results ---------------------------------
+callset <- list()
+
+IGNORED_TOOLS <- c("alignments", "TIDDIT", "SvABA")
+
+tool_dirs <- list.dirs(RESULTSDIR, recursive=FALSE, full.names = FALSE)
+tool_dirs <- subset(tool_dirs, tool_dirs %in% c(TOOLS$WES, TOOLS$WGS))
+for (tool in tool_dirs) {
+	tool_files <- list.files(paste(RESULTSDIR, tool, sep = "/"), pattern = ".bed$")
+	for (bed_file in tool_files) {
+		message("NOW: ", paste(tool, bed_file, sep = "/"))
+		bed      <- import(paste(RESULTSDIR, tool, bed_file, sep = "/"), genome = "GRCh37")
+		bed$name <- as.numeric(bed$name)
+		bed$name <- ifelse(bed$name > 2, "DUP", ifelse(bed$name == 2, "REF", "DEL"))
+		bed$pval <- bed$score
+		bed$score <- 0
+
+		## Filter called CNVs
+		# bed <- subset(bed, width(bed) >= 450 & bed$name != "REF")
+		bed <- subset(bed, bed$name != "REF" & !seqnames(bed) %in% c("X", "Y", "MT"))
+
+		## Subset to library region
+		if (startsWith(bed_file, "GB-WGS")) {library = "WGS"} else {library = "WES"}
+		bed <- subsetByOverlaps(bed, BED[[library]], minoverlap = 1, ignore.strand = TRUE)
+
+		## Compare with truth set -----------------------------
+		truth_file <- paste(TRUTHDIR, bed_file, sep = "/")
+		if (file.exists(truth_file)) {
+			truth    <- import(truth_file, genome = "GRCh37")
+			truth$score <- -1
+			truth$pval  <- -1
+			hits     <- findOverlaps(bed, truth)
+
+			## Check that CNV type is the same for call set and truth (truth$name == "CNV" is for NA12878)
+			hits     <- hits[bed$name[queryHits(hits)] == truth$name[subjectHits(hits)] | truth$name[subjectHits(hits)] == "CNV"]
+
+			## Count called CNVs that overlap a true CNV by at least MIN_OVERLAP
+			overlaps <- pintersect(bed[queryHits(hits)], truth[subjectHits(hits)])
+			percentOverlap <- width(overlaps) / width(bed[queryHits(hits)])
+			hits <- hits[percentOverlap >= MIN_OVERLAP]
+			bed[queryHits(hits)]$score <- percentOverlap[percentOverlap >= MIN_OVERLAP]
+
+			## Count CNVs overlapping N true calls as N true positives
+			multi_truths <- unique(queryHits(hits)[duplicated(queryHits(hits))])
+			for (i in multi_truths) {
+				bed$score[i] <- sum(queryHits(hits) == i)
+			}
+
+			## Only count true CNVs in callset as a single true positive
+			# Keep the CNV with the highest overlap score
+			multi_calls <- unique(subjectHits(hits)[duplicated(subjectHits(hits))])
+			for (i in multi_calls) {
+				ii <- queryHits(hits)[subjectHits(hits) == i]
+				ii <- subset(ii, bed[ii]$score < Inf)
+				ord <- order(bed[ii]$score, decreasing = TRUE)
+				bed$score[tail(ii[ord], -1)] <- Inf
+			}
+
+			## Append false negative calls for later counting
+			truth_not_called <- truth[setdiff(seq_along(truth), subjectHits(hits))]
+			hits_not_called <- findOverlaps(truth_not_called, BED[[library]], minoverlap = 1, ignore.strand = TRUE)
+			bed <- c(bed, truth_not_called[unique(queryHits(hits_not_called))])
+
+			## Add calls to callset list
+			sample <- sub("\\.bed$", "", bed_file)
+			if (! sample %in% names(callset)) {
+				callset[[sample]] <- list(
+					cnv = paste(as.character(truth), truth$name, sep = "_")
+				)
+			}
+
+			# calls <- rep(0, length(truth))
+			pvals <- rep(NA, length(truth))
+			pvals[subjectHits(hits)] <- bed$pval[queryHits(hits)]
+			# calls[subjectHits(hits)] <- 1
+			# names(calls) <- paste(as.character(truth), truth$name, sep = "_")
+			callset[[sample]][[tool]] <- pvals
+		}
+		dir.create(paste(OUTDIR, tool, sep = "/"), showWarnings = FALSE)
+		bed_string <- export(bed, format = "bed")
+		outfile <- paste(OUTDIR, tool, bed_file, sep = "/")
+		writeLines(paste(bed_string, bed$pval, sep = "\t"), outfile)
+	}
+}
+callset.df     <- lapply(callset, as.data.frame)
+callset.melted <- lapply(callset.df, reshape::melt, id.vars = "cnv", variable_name = "tool")
+for (i in names(callset.melted)) {
+	callset.melted[[i]]$sample <- i
+}
+callset.melted$make.row.names = FALSE
+callset.final <- do.call("rbind", callset.melted)
+# callset.final <- callset.final[, c(4, 1, 2, 3)]
+
+write.table(callset.final, file = "callset.txt", sep = "\t", quote = FALSE, row.names = FALSE)
