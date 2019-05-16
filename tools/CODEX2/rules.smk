@@ -9,7 +9,7 @@ rule CODEX2_preprocess:
 		bam = expand("results/alignments/{sample}.bam", sample = SAMPLES_WES),
 		bai = expand("results/alignments/{sample}.bai", sample = SAMPLES_WES),
 	output:
-		preprocess_data = temp("temp/CODEX2/CODEX2_preprocess.RData")
+		preprocess_data = temp("temp/CODEX2/preprocess_codex2.RData")
 	params:
 		input_bam_dir = "results/alignments",
 		pon_bam_dir   = config["pon"]["WES"],
@@ -35,7 +35,7 @@ rule CODEX2_calling:
 		chr_beds = temp(expand("temp/CODEX2/scatter_gather/{sample}_chr{{chr}}.bed", sample = SAMPLES_WES)),
 		filtered_chr_beds = temp(expand("temp/CODEX2/scatter_gather/{sample}_chr{{chr}}_filtered.bed", sample = SAMPLES_WES))
 	params:
-		result_dir = "temp/CODEX2/scatter_gather/"
+		outdir = "temp/CODEX2/scatter_gather/"
 	log: "logs/codex2/run_codex2_{chr}.log"
 	benchmark: "benchmarks/CODEX2_calling/WES_samples_{chr}.txt"
 	threads: 1
@@ -44,7 +44,7 @@ rule CODEX2_calling:
 		walltime_h = 10
 	shell:
 		"(module load tools intel/redist/2019_update2 intel/perflibs/64 R/3.5.0; "
-		"Rscript tools/CODEX2/codex2.R {params.result_dir} {wildcards.chr}"
+		"Rscript tools/CODEX2/codex2.R {input} {params.outdir} {wildcards.chr}"
 		";) 2> {log}"
 
 rule CODEX2_postprocess:
