@@ -30,7 +30,7 @@ rule CNVkit_calling_WES:
 	log: "logs/CNVkit_calling/GB-WES.log"
 	benchmark: "benchmarks/CNVkit/WES_samples.txt"
 	shell:
-		"(module load shared tools ngs anaconda3/4.4.0; "
+		"(module load tools ngs anaconda3/4.4.0; "
 		"cnvkit.py batch {input.bam} --normal {input.pon} "
 		"-p {threads} --fasta {input.ref} --annotate {input.refFlat} "
 		"--access {input.mappable} --method hybrid --targets {input.bed} "
@@ -64,7 +64,7 @@ rule CNVkit_calling_WGS:
 	log: "logs/CNVkit_calling/GB-WGS.log"
 	benchmark: "benchmarks/CNVkit/WGS_samples.txt"
 	shell:
-		"(module load shared tools ngs anaconda3/4.4.0; "
+		"(module load tools ngs anaconda3/4.4.0; "
 		"cnvkit.py batch {input.bam} --normal {input.pon} "
 		"-p {threads} --fasta {input.ref} --annotate {input.refFlat} "
 		"--access {input.mappable} --method wgs --targets {input.bed} "
@@ -85,9 +85,10 @@ rule CNVkit_convert:
 	threads: 1
 	log: "logs/CNVkit_convert/{sample}.log"
 	shell:
-		"(module load shared tools ngs anaconda3/4.4.0; "
+		"(module load tools ngs anaconda3/4.4.0; "
 		"cnvkit.py call {input.cns} -o {output.cns}; "
 		"cnvkit.py segmetrics --sem -o /dev/stdout -s {output.cns} {input.cnr} "
 		"| tail -n +2 | cut -f 1,2,3,6,10 > {output.bed} "
 		# "cnvkit.py export bed {output.cns} --show all -y -o {output.bed}; "
 		") 2> {log}"
+

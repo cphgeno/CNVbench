@@ -63,3 +63,4 @@ rule CODEX2_postprocess:
 		"(cat {input.chr_beds} > {output.bed}; "
 		"cat {input.filtered_chr_beds} > {output.filtered_bed} "
 		";) 2> {log}"
+

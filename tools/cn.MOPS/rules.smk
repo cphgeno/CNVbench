@@ -28,7 +28,7 @@ for batch_samples in cnmops_wgs_batches:
 			mem_gb = 120,
 			walltime_h = 50
 		shell:
-			"(module load intel/redist/2019_update2 intel/perflibs/64 R/3.5.0; "
+			"(module load tools intel/redist/2019_update2 intel/perflibs/64 R/3.5.0; "
 			"Rscript cnmops_wgs.R {params.result_dir} {params.bin_size} {threads} {input.input_bams}; "
 			") 2> {log}"
 
@@ -47,6 +47,7 @@ rule cnmops_wes:
 		mem_gb = 120,
 		walltime_h = 50
 	shell:
-		"(module load intel/redist/2019_update2 intel/perflibs/64 R/3.5.0; "
+		"(module load tools intel/redist/2019_update2 intel/perflibs/64 R/3.5.0; "
 		"Rscript cnmops_wes.R {params.result_dir} {params.exon_bed} {threads} {input.input_bams}; "
 		") 2> {log}"
+

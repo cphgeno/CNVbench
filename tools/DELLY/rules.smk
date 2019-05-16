@@ -20,10 +20,11 @@ rule DELLY_calling:
 	log: "logs/DELLY_calling/{sample}.log"
 	benchmark: "benchmarks/DELLY/{sample}.txt"
 	shell:
-		"module load bcftools/1.9 delly2/0.7.5 ;\n"
+		"(module load tools bcftools/1.9 delly2/0.7.5 ;\n"
 		"delly call -g {params.ref} -t DEL -o {output.bcf_del} {input.bam} ;\n"
 		"delly call -g {params.ref} -t DUP -o {output.bcf_ins} {input.bam} ;\n"
 		"bcftools concat -a -O v -o {output.vcf} {output.bcf_del} {output.bcf_ins}"
+		") 2> {log}"
 
 rule DELLY_convert:
 	input:
@@ -52,3 +53,4 @@ rule DELLY_convert:
 			for entry in BED:
 				line = "\t".join(entry)
 				out.write(line+"\n")
+

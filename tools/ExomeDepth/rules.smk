@@ -23,7 +23,7 @@ rule ExomeDepth_calling_WES:
 	log: "logs/ExomeDepth_calling/{sample}.log"
 	benchmark: "benchmarks/ExomeDepth/{sample}.txt"
 	shell:
-		"(module load shared tools ngs intel/compiler/64/2019_update3 gcc/8.2.0 R/3.5.0; "
+		"(module load tools ngs intel/compiler/64/2019_update3 gcc/8.2.0 R/3.5.0; "
 		"Rscript --vanilla --slave tools/ExomeDepth/ExomeDepth_PoN.R --ref {input.ref} --bed {input.bed} --pon {input.pon} --out {params.outdir} {input.bam}; "
 		") 2> {log}"
 
@@ -38,6 +38,6 @@ rule ExomeDepth_convert:
 	threads: 1
 	log: "logs/ExomeDepth_convert/{sample}.log"
 	shell:
-		"(module load shared tools ngs anaconda3/4.4.0 perl/5.24.0; "
+		"(module load tools ngs anaconda3/4.4.0 perl/5.24.0; "
 		"perl -MMath::Round -a -n -e 'chomp(); print($_.\"\t\".round($F[11]*2).\"\n\")' {input.tsv} | cut -f 5-7,9,15 | csvcut --tabs -c 3,1,2,5,4 | csvformat -T | tail -n +2 > {output.bed}; "
 		") 2> {log}"

@@ -31,7 +31,7 @@ rule Manta_calling:
 	log: "logs/Manta_calling/{sample}.log"
 	benchmark: "benchmarks/Manta/{sample}.txt"
 	shell:
-		"(module load shared tools ngs anaconda2/4.4.0 manta/1.5.0; "
+		"(module load tools ngs anaconda2/4.4.0 manta/1.5.0; "
 		"rm -rf {params.outdir}; "
 		# Configure Manta
 		"configManta.py "
@@ -72,3 +72,4 @@ rule Manta_convert:
 		# Save output
 		"| fgrep -v '#' > {output.bed}; "
 		") 2> {log}"
+

@@ -22,7 +22,7 @@ rule CNVnator_calling:
 	benchmark: "benchmarks/CNVnator/{sample}.txt"
 	shell:
 		"("
-		"module load shared tools ngs root/6.06.06 yeppp/1.0.0 perl/5.24.0 cnvnator/0.3.3; "
+		"module load tools ngs root/6.06.06 yeppp/1.0.0 perl/5.24.0 cnvnator/0.3.3; "
 		"mkdir -p {params.outdir}; "
 		"touch {params.outdir}/.notempty; "
 		"cnvnator -root {output.root} -tree {input.cram}; "
@@ -47,7 +47,7 @@ rule CNVnator_filtering:
 	log: "logs/CNVnator_filtering/{sample}.log"
 	shell:
 		"("
-		"module load shared tools ngs bedtools/2.27.1 vcflib/1.0.0-rc2; "
+		"module load tools ngs bedtools/2.27.1 vcflib/1.0.0-rc2; "
 		"vcffilter -f 'natorP1 < 0.01 & natorP2 < 0.01' {input.vcf} > {output.vcf_pval}; "
 		"bedtools intersect -a {output.vcf_pval} -b {input.bed} -wa -wb -header > {output.vcf_exon}; "
 		") 2> {log}"
@@ -90,3 +90,4 @@ rule CNVnator_postprocess:
 rule CNVnator:
 	input:
 		expand("results/{tool}/{sample}.bed", tool = "CNVnator", sample = SAMPLES_WGS)
+
