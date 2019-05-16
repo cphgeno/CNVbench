@@ -2,12 +2,13 @@
 
 library(CODEX2)
 
-load("preprocess_codex2.RData")
-
 # Get args
 args <- commandArgs(trailingOnly = TRUE)
-result_dir <- args[1]
-chr <- as.integer(args[2])
+input_RData <- args[1]
+result_dir  <- args[2]
+chr         <- as.integer(args[3])
+
+load(input_RData)
 
 # Run CODEX2.
 chr_index <- which(seqnames(ref_qc) == chr)
