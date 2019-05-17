@@ -6,6 +6,7 @@
 library(ComplexHeatmap)
 library(RColorBrewer)
 library(openxlsx)
+library(circlize)
 
 # Specify colors from RColorBrewer
 lightblue <- brewer.pal(n=12, 'Paired')[1]; darkblue <- brewer.pal(n=12, 'Paired')[2]
@@ -15,20 +16,19 @@ lightorange <- brewer.pal(n=12, 'Paired')[7]; darkorange <- brewer.pal(n=12, 'Pa
 lightpurple <- brewer.pal(n=12, 'Paired')[9]; darkpurple <- brewer.pal(n=12, 'Paired')[10]
 yellow <- brewer.pal(n=12, 'Paired')[11]; brown <- brewer.pal(n=12, 'Paired')[12]
 
-#out_dir <- "~/Desktop/"
-out_dir <- "/home/projects/cu_10047/data/analyzed_samples/project_hierarchy/research_projects/CNV_benchmark/plotting_scripts/"
-#in_dir <- "/mnt/computerome_rh/data/analyzed_samples/project_hierarchy/research_projects/CNV_benchmark/concordance/"
-in_dir <- "/home/projects/cu_10047/data/analyzed_samples/project_hierarchy/research_projects/CNV_benchmark/concordance/"
+out_dir <- "plotting_scripts/"
+in_dir  <- "concordance/"
+
 
 # Heatmap function for all true CNVs
 make_heatmap <- function(data_frame, color, cl_cols, edge, add_q, title) {
-  
+
   # Get annotation of CNV types and make bar
   if (is.data.frame(add_q)) {
     meta <- qualities[rownames(data_frame),c('Quality_score', 'Manually_checked')]; colnames(meta) <- c('Quality','Man.annot')
     meta_bar <- HeatmapAnnotation(df = meta, col = list(Quality = colorRamp2(c(-1, 0, 1), c(darkblue, "white", darkred)),
-                                                        Man.annot = c('Yes' = lightpurple, 'No' = lightorange)), 
-                                  gp = gpar(col = "white", lwd = edge), show_annotation_name = T, 
+                                                        Man.annot = c('Yes' = lightpurple, 'No' = lightorange)),
+                                  gp = gpar(col = "white", lwd = edge), show_annotation_name = T,
                                   annotation_name_side = 'left', annotation_name_gp = gpar(fontsize = 22),
                                   annotation_legend_param = list(Quality = list(labels_gp = gpar(fontsize = 20),
                                                                                 title_gp = gpar(fontsize = 22),
@@ -39,13 +39,13 @@ make_heatmap <- function(data_frame, color, cl_cols, edge, add_q, title) {
                                                                                   title_gp = gpar(fontsize = 22),
                                                                                   border = 'black',
                                                                                   grid_height = unit(0.3, "in"),
-                                                                                  grid_width = unit(0.3, "in"))))          
+                                                                                  grid_width = unit(0.3, "in"))))
   } else {
     meta <- data.frame(gsub('.+_(.+)$', '\\1', rownames(data_frame))); colnames(meta) <- c('Type')
-    meta_bar <- HeatmapAnnotation(df = meta, col = list(Type = c('DUP' = lightred, 
+    meta_bar <- HeatmapAnnotation(df = meta, col = list(Type = c('DUP' = lightred,
                                                                  'DEL' = lightblue,
-                                                                 'CNV' = yellow)), 
-                                  gp = gpar(col = "white", lwd = edge), show_annotation_name = T, 
+                                                                 'CNV' = yellow)),
+                                  gp = gpar(col = "white", lwd = edge), show_annotation_name = T,
                                   annotation_name_side = 'left', annotation_name_gp = gpar(fontsize = 22),
                                   annotation_legend_param = list(Type = list(labels_gp = gpar(fontsize = 20),
                                                                              title_gp = gpar(fontsize = 22),
@@ -53,7 +53,7 @@ make_heatmap <- function(data_frame, color, cl_cols, edge, add_q, title) {
                                                                              grid_height = unit(0.3, "in"),
                                                                              grid_width = unit(0.3, "in"))))
   }
-  
+
   # Clustering for columns
   if (cl_cols) {
     hc <- hclust(dist(data_frame))
@@ -62,25 +62,24 @@ make_heatmap <- function(data_frame, color, cl_cols, edge, add_q, title) {
   } else {
     cl <- T
   }
-  
+
   # Code for actual heatmap
-  cnv_heatmap = Heatmap(t(data_frame), column_title_side = 'bottom', column_title = 'True CNVs', 
+  cnv_heatmap = Heatmap(t(data_frame), column_title_side = 'bottom', column_title = 'True CNVs',
                         name = "cnv_heatmap", cluster_columns = cl,
                         top_annotation = meta_bar, show_row_dend = T, show_column_dend = T,
                         show_row_names = T, show_column_names = F, column_dend_height = unit(2, 'cm'),
                         row_dend_width = unit(2, 'cm'), row_title_side = 'right',
                         column_title_gp = gpar(fontsize = 22), row_names_gp = gpar(fontsize = 22),
                         col = c("1" = color, "0" = "grey95"), rect_gp = gpar(col = "white", lwd = edge),
-                        heatmap_legend_param = list(title = "Match", labels = c('Yes', 'No'), border = 'black', 
+                        heatmap_legend_param = list(title = "Match", labels = c('Yes', 'No'), border = 'black',
                                                     title_gp = gpar(fontsize = 22),
                                                     labels_gp = gpar(fontsize = 20),
                                                     grid_height = unit(0.3, "in"),
                                                     grid_width = unit(0.3, "in")))
-  
-  # Draw and return plot
-  p <- draw(cnv_heatmap, heatmap_legend_side = "right", column_title = paste("CNV calling heatmap at", title), column_title_gp = gpar(fontsize = 32, fontface = "bold"))
-  return(cnv_heatmap)
-  
+
+  # Draw plot
+  draw(cnv_heatmap, heatmap_legend_side = "right", column_title = paste("CNV calling heatmap at", title), column_title_gp = gpar(fontsize = 32, fontface = "bold"))
+
 }
 
 #### True CNV heatmaps ####
@@ -93,9 +92,9 @@ data$uniq_cnv <- paste0(data$sample, '_', data$cnv)
 # Make data into a matrix with tools in columns and individual CNVs in rows
 cnv_mat <- data.frame()
 for (cnv in unique(data$uniq_cnv)) {
-  
+
   rows <- unique(data[data$uniq_cnv==cnv,])
-  
+
   values <- c()
   for (tool in c(levels(data$tool))) {
     if (tool %in% rows$tool) {
@@ -104,10 +103,10 @@ for (cnv in unique(data$uniq_cnv)) {
       values <- c(values, NA)
     }
   }
-  
+
   cnv_mat <- rbind(cnv_mat, values)
 }
-colnames(cnv_mat) <- gsub('GermlineCNVCaller', 'GATK gCNV', levels(data$tool))
+colnames(cnv_mat) <- gsub('GATK_gCNV', 'GATK gCNV', levels(data$tool))
 rownames(cnv_mat) <- unique(data$uniq_cnv)
 
 
@@ -166,71 +165,92 @@ table(rowSums(cnv_mat_2, na.rm = T))
 cnv_mat_2_wes <- cnv_mat_2[grep('WES', rownames(cnv_mat_2)),c('CLC', 'cn.MOPS', 'CNVkit', 'CODEX2', 'ExomeDepth', 'GATK gCNV', 'Manta')]
 cnv_mat_2_wgs <- cnv_mat_2[grep('WGS', rownames(cnv_mat_2)),c('CLC', 'cn.MOPS', 'CNVnator', 'ControlFREEC', 'DELLY', 'GATK gCNV', 'Lumpy', 'Manta')]
 
-#cnv_mat_2_wes <- cnv_mat_2_wes[rowSums(cnv_mat_2_wes, na.rm = T)!=1,]
-
 # Percentages
 wgs_percentages <- (table(rowSums(cnv_mat_2_wgs, na.rm = T))/nrow(cnv_mat_2_wgs))*100
 wes_percentages <- (table(rowSums(cnv_mat_2_wes, na.rm = T))/nrow(cnv_mat_2_wes))*100
 
 
-# Heatmap code
+# Heatmap function for called CNVs
+make_heatmap_called <- function(data_frame, title) {
+  
+  # Get annotations
+  meta <- cbind.data.frame(gsub('.+_(.+)$', '\\1', rownames(data_frame)), cytoscan[rownames(data_frame),], lengths[rownames(data_frame)]<1000); colnames(meta) <- c('Type', 'CytoScan', '<1000bp')
+  
+  meta_bar <- HeatmapAnnotation(df = meta, col = list(Type = c('DUP' = lightred, 
+                                                               'DEL' = lightblue),
+                                                      CytoScan = c('1' = darkpurple,
+                                                                   '0' = lightorange),
+                                                      "<1000bp" = c('TRUE' = yellow,
+                                                                   'FALSE' = darkgreen)), 
+                                show_annotation_name = T,
+                                annotation_name_side = 'left', annotation_name_gp = gpar(fontsize = 22),
+                                annotation_legend_param = list(Type = list(labels_gp = gpar(fontsize = 20),
+                                                                           title_gp = gpar(fontsize = 22),
+                                                                           border = 'black',
+                                                                           grid_height = unit(0.3, "in"),
+                                                                           grid_width = unit(0.3, "in")),
+                                                               CytoScan = list(labels_gp = gpar(fontsize = 20),
+                                                                               title_gp = gpar(fontsize = 22),
+                                                                               border = 'black',
+                                                                               grid_height = unit(0.3, "in"),
+                                                                               grid_width = unit(0.3, "in"),
+                                                                               labels = c('Yes', 'No')),
+                                                               "<1000bp" = list(labels_gp = gpar(fontsize = 20),
+                                                                               title_gp = gpar(fontsize = 22),
+                                                                               border = 'black',
+                                                                               grid_height = unit(0.3, "in"),
+                                                                               grid_width = unit(0.3, "in"),
+                                                                               labels = c('Yes', 'No'))))
+  
+  
+  # Cluster columns
+  if (title == 'WES') {
+    hc <- stats::hclust(dist(data_frame))
+    order <- hc$order
+  } else {
+    
+    # Set NAs to -1
+    data_frame[is.na(data_frame)] <- -1
+    
+    # For speed purposes, we use kmeans
+    cl <- kmeans(data_frame, centers = 100)
+    
+    # Find out which clusters are most similar
+    cl_order <- hclust(dist(as.matrix(cl$centers)))
+    
+    # We now derive ordering based on the clusters
+    order <- unlist(sapply(cl_order$order, function(c) {which(cl$cluster==c)}))
 
-# Get annotations
-meta <- cbind.data.frame(gsub('.+_(.+)$', '\\1', rownames(cnv_mat_2_wes)), cytoscan[rownames(cnv_mat_2_wes),], lengths[rownames(cnv_mat_2_wes)]<1000); colnames(meta) <- c('Type', 'CytoScan', '>100bp')
-
-meta_bar <- HeatmapAnnotation(df = meta, col = list(Type = c('DUP' = lightred, 
-                                                             'DEL' = lightblue),
-                                                    CytoScan = c('1' = darkpurple,
-                                                                 '0' = lightorange),
-                                                    ">100bp" = c('TRUE' = yellow,
-                                                                  'FALSE' = darkgreen)), 
-                              gp = gpar(col = "white", lwd = 0.01), show_annotation_name = T, 
-                              annotation_name_side = 'left', annotation_name_gp = gpar(fontsize = 22),
-                              annotation_legend_param = list(Type = list(labels_gp = gpar(fontsize = 20),
-                                                                         title_gp = gpar(fontsize = 22),
-                                                                         border = 'black',
-                                                                         grid_height = unit(0.3, "in"),
-                                                                         grid_width = unit(0.3, "in")),
-                                                             CytoScan = list(labels_gp = gpar(fontsize = 20),
-                                                                             title_gp = gpar(fontsize = 22),
-                                                                             border = 'black',
-                                                                             grid_height = unit(0.3, "in"),
-                                                                             grid_width = unit(0.3, "in"),
-                                                                             labels = c('Yes', 'No')),
-                                                             ">100bp" = list(labels_gp = gpar(fontsize = 20),
-                                                                             title_gp = gpar(fontsize = 22),
-                                                                             border = 'black',
-                                                                             grid_height = unit(0.3, "in"),
-                                                                             grid_width = unit(0.3, "in"),
-                                                                             labels = c('Yes', 'No'))))
-
-# Cluster columns
-hc <- hclust(dist(cnv_mat_2_wes))
-# group <- cutree(hc, k = 20)
-# 
-# clusters <- cutreeDynamic(hc, distM = as.matrix(dist(x)), method = "tree")
-# 
-# cl <- as.dendrogram(hc) # Work-around memory error?
-# cl <- cluster_within_group(t(cnv_mat_2_wes), group)
-
-# Alternative ordering
+    # Set -1 back to NAs
+    data_frame[data_frame==-1] <- NA
+  }
+  
+  # Code for actual heatmap - column dendrogram cannot be shown, but columns are reordered according to hclust
+  cnv_heatmap = Heatmap(t(data_frame), column_title_side = 'bottom', column_title = 'Called CNVs', 
+                        name = "cnv_heatmap", cluster_columns = F, column_order = order,
+                        top_annotation = meta_bar, show_row_dend = T, show_column_dend = F,
+                        show_row_names = T, show_column_names = F, raster_quality = 1.5,
+                        row_dend_width = unit(2, 'cm'), row_title_side = 'right',
+                        column_title_gp = gpar(fontsize = 22), row_names_gp = gpar(fontsize = 22),
+                        col = c("1" = darkblue, "0" = "grey95"),
+                        heatmap_legend_param = list(title = "Match", labels = c('Yes', 'No'), border = 'black', 
+                                                    title_gp = gpar(fontsize = 22),
+                                                    labels_gp = gpar(fontsize = 20),
+                                                    grid_height = unit(0.3, "in"),
+                                                    grid_width = unit(0.3, "in")))
+  
+  draw(cnv_heatmap, heatmap_legend_side = "right", column_title = paste0("Consensus CNV calling heatmap (", title, ")"), column_title_gp = gpar(fontsize = 32, fontface = "bold"))
+}
 
 
-# Code for actual heatmap
-cnv_heatmap = Heatmap(t(cnv_mat_2_wes), column_title_side = 'bottom', column_title = 'Called CNVs', 
-                      name = "cnv_heatmap", cluster_columns = F, column_order = hc$order,
-                      top_annotation = meta_bar, show_row_dend = T, show_column_dend = F,
-                      show_row_names = T, show_column_names = F,# column_dend_height = unit(2, 'cm'),
-                      row_dend_width = unit(2, 'cm'), row_title_side = 'right',
-                      column_title_gp = gpar(fontsize = 22), row_names_gp = gpar(fontsize = 22),
-                      col = c("1" = darkblue, "0" = "grey95"), rect_gp = gpar(col = "white", lwd = 0.01),
-                      heatmap_legend_param = list(title = "Match", labels = c('Yes', 'No'), border = 'black', 
-                                                  title_gp = gpar(fontsize = 22),
-                                                  labels_gp = gpar(fontsize = 20),
-                                                  grid_height = unit(0.3, "in"),
-                                                  grid_width = unit(0.3, "in")))
+# Making the actual plots
+#png(paste0(out_dir, '/CNV_heatmap_WES_2.png'), width = 20, height = 8, units = 'in', res = 600)
+pdf(paste0(out_dir, '/CNV_heatmap_WES_2.pdf'), width = 20, height = 8)
+make_heatmap_called(cnv_mat_2_wes, "WES")
+dev.off()
 
-png(paste0(out_dir, '/CNV_heatmap_WES_2.png'), width = 20, height = 8, units = 'in', res = 300)
-p <- draw(cnv_heatmap, heatmap_legend_side = "right", column_title = paste("CNV calling heatmap (WES)"), column_title_gp = gpar(fontsize = 32, fontface = "bold"))
+#png(paste0(out_dir, '/CNV_heatmap_WGS_2.png'), width = 20, height = 8, units = 'in', res = 600)
+pdf(paste0(out_dir, '/CNV_heatmap_WGS_2.pdf'), width = 20, height = 8)
+make_heatmap_called(cnv_mat_2_wgs, "WGS")
 dev.off()
 
