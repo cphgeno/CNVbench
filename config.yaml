@@ -1,3 +1,9 @@
+##
+## Config file for snakemake CNV callers benchmarking workflow. 
+##
+
+## Fill in with the tools to run. If a tool is used for both WES and WGS samples, put it in both lists.
+# A sample is determined as either WES or WGS from its name; A WES sample must contain the string 'WES' in the file name and likewise for WGS samples.
 TOOLS:
   WES:
   - cn.MOPS
@@ -8,16 +14,14 @@ TOOLS:
   - Manta
   WGS:
   - cn.MOPS
-#  - CNVkit
   - CNVnator
   - ControlFREEC
   - DELLY
   - Lumpy
   - GATK_gCNV
   - Manta
-#  - SvABA
-#  - TIDDIT
 
+## Reference genome specific files
 human_reference:          resources/hg19/sequence/ref.fa
 sequence_dict:            resources/hg19/sequence/ref.dict
 chromosome_sequences_dir: resources/chromosome_sequences
@@ -28,16 +32,18 @@ indels1k:                 resources/hg19/known_sites/1000G_phase1.indels.b37.vcf
 snps1k:                   resources/hg19/known_sites/1000G_phase1.snps.high_confidence.b37.vcf.gz
 refFlat:                  resources/refFlat.txt
 
-gatk_conda_env: /home/projects/cu_10047/people/filipev/.conda/envs/gatk_4.1.0.0
-
-multiqc_config:
-  general: resources/multiqc_config.yaml
+## Conda environment used for running GATK gCNV. Check tool documentation for info on creation.
+gatk_conda_env: ~
 
 bed:
-  WES_probes:   resources/hg19/regions/S04380110_Covered_BED.bed
-  WES_strict:   resources/hg19/regions/Broad_exomes.bed
-  WGS_mappable: resources/hg19/regions/WGS_mappable_regions.bed
+  ## Regions of WES capture kit
+  WES_probes:   ~
+  ## Exonic regions
+  WES_strict:   ~
+  ## WGS mappable regions
+  WGS_mappable: ~
 
+## Paths containing alignments for panel of normal samples
 pon:
   WES: resources/PoN/WES
   WGS: resources/PoN/WGS
