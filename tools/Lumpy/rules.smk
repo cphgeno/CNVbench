@@ -46,7 +46,7 @@ rule Lumpy_express:
 	output:
 		vcf = "temp/Lumpy/vcf/{sample}.vcf"
 	params:
-		config = "tools/Lumpy/Lumpy.config"
+		config = "tools/Lumpy/lumpy.config"
 	log: "logs/Lumpy/lumpyexpress/{sample}.log"
 	benchmark: "benchmarks/Lumpy/{sample}_express.txt"
 	threads: 7
