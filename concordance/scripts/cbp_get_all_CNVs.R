@@ -36,7 +36,7 @@ for (sample in include_samples) {
       bed      <- import(filename, genome = "GRCh37", extraCols = c(pval = "numeric"))
       
       # Find overlaps
-      hits     <- findOverlaps(bed, truth)
+      hits     <- findOverlaps(bed[bed$score!='-Inf'], truth)
       
       # Check that CNV type is the same for call set and truth (truth$name == "CNV" is for NA12878)
       hits     <- hits[bed$name[queryHits(hits)] == truth$name[subjectHits(hits)]]
