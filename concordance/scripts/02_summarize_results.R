@@ -133,9 +133,12 @@ extract_benchmarks <- function(sample, tool, benchdir = BENCHMARKDIR) {
 			df <- subset(df, df$sample == res$sample)
 			res$cputime <- as.numeric(hm(df$`elapsed time`))
 		}
-	# } else if (tool == "CNVkit") {
 	} else {
-		input <- Sys.glob(sprintf("%s/%s*/%s*.txt", benchdir, tool, sample))
+		if (tool %in% c("CNVkit", "CODEX2") || (tool == "cn.MOPS" && res$library == "WES")) {
+			input <- Sys.glob(sprintf("%s/%s*/*%s*.txt", benchdir, tool, res$library))
+		} else {
+			input <- Sys.glob(sprintf("%s/%s*/*%s*.txt", benchdir, tool, sample))
+		}
 		if (length(input) > 0) {
 			df <- do.call("rbind", lapply(input, fread))
 			res$cputime     <- sum(df$s)
