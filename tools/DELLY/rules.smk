@@ -49,7 +49,7 @@ rule DELLY_convert:
 				number = line[9].split(":")[-5]
 				GQ = line[-1].split(":")[2]
 				BED.append([chrom,start,end,number,GQ])
-		with open(output.new_bed,"w") as out:
+		with open(output.bed,"w") as out:
 			for entry in BED:
 				line = "\t".join(entry)
 				out.write(line+"\n")
