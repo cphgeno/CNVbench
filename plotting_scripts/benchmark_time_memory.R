@@ -1,16 +1,7 @@
 library(tidyverse)
 library(RColorBrewer)
 
-
-
-if(file.exists("benchmarks.txt")){
-  data_info = read_tsv("benchmarks.txt")
-}else{
-  data_info = read_tsv("/home/projects/cu_10047/data/analyzed_samples/project_hierarchy/research_projects/CNV_benchmark/concordance/benchmarks.txt")
-  
-}
-
-
+data_info = read_tsv("concordance/benchmarks.txt")
 
 palette = c(brewer.pal(n=12, 'Paired')[1],brewer.pal(n=12, 'Paired')[5])
 
@@ -30,9 +21,10 @@ data_info %>% filter(!cputime =="." ) %>% ggplot() +
 
 
 require(gridExtra)
-png("Benchmark_time_memory.png") 
+png("plotting_scripts/Benchmark_time_memory.png") 
 grid.arrange(plot1 + theme(legend.position = "none"), plot2, ncol=2)
 dev.off() 
-pdf("Benchmark_time_memory.pdf") 
+pdf("plotting_scripts/Benchmark_time_memory.pdf") 
 grid.arrange(plot1 + theme(legend.position = "none"), plot2, ncol=2)
-dev.off() 
+dev.off()
+ 
